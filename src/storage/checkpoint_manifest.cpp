@@ -88,7 +88,7 @@ CheckpointManifest load_safetensors_index(const std::filesystem::path& index_pat
 
         const auto& info = tensor_it->second;
         manifest.tensors.emplace(tensor, ShardTensorLocation{
-            shard, info.data_begin, info.data_end - info.data_begin});
+            shard, it->second.data_offset() + info.data_begin, info.data_end - info.data_begin});
     }
     return manifest;
 }
