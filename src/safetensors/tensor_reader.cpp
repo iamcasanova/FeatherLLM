@@ -7,7 +7,7 @@ namespace featherllm::safetensors {
 
 ShardedTensorReader::ShardedTensorReader(std::filesystem::path index_path,
                                          std::size_t window_bytes)
-    : index_path_(std::move(index_path)),
+    : index_path_(index_path),
       window_bytes_(window_bytes),
       manifest_(storage::load_safetensors_index(index_path_)) {
     if (window_bytes_ == 0) throw std::invalid_argument("window size must be non-zero");
