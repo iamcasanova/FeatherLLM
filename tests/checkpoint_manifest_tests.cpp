@@ -32,7 +32,7 @@ int main() {
 
     {
         std::ofstream out(index);
-        out << "{\"metadata\":{},\"weight_map\":{"a":"manifest_test-00001-of-00001.safetensors","b":"manifest_test-00001-of-00001.safetensors"}}";
+        out << R"({"metadata":{},"weight_map":{"a":"manifest_test-00001-of-00001.safetensors","b":"manifest_test-00001-of-00001.safetensors"}})";
     }
 
     const auto manifest = featherllm::storage::load_safetensors_index(index);
