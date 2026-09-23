@@ -16,3 +16,5 @@ jobs:
         run: cmake --build build --parallel
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Storage benchmark
+        run: ./build/storage_benchmark
