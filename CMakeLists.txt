@@ -7,12 +7,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(featherllm_storage
     src/storage/bounded_file.cpp
-    src/storage/checkpoint_manifest.cpp
 )
 target_include_directories(featherllm_storage PUBLIC include)
 
 add_library(featherllm_safetensors
     src/safetensors.cpp
+    src/storage/checkpoint_manifest.cpp
 )
 target_include_directories(featherllm_safetensors PUBLIC include)
 target_link_libraries(featherllm_safetensors PUBLIC featherllm_storage)
