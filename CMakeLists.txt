@@ -5,13 +5,23 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+add_library(featherllm_storage
+    src/storage/bounded_file.cpp
+)
+target_include_directories(featherllm_storage PUBLIC include)
+
 add_library(featherllm_safetensors
     src/safetensors.cpp
 )
 target_include_directories(featherllm_safetensors PUBLIC include)
+target_link_libraries(featherllm_safetensors PUBLIC featherllm_storage)
+
+enable_testing()
+
+add_executable(bounded_file_tests tests/bounded_file_test.cpp)
+target_link_libraries(bounded_file_tests PRIVATE featherllm_storage)
+add_test(NAME bounded_file_tests COMMAND bounded_file_tests)
 
 add_executable(safetensors_tests tests/safetensors_tests.cpp)
 target_link_libraries(safetensors_tests PRIVATE featherllm_safetensors)
-
-enable_testing()
 add_test(NAME safetensors_tests COMMAND safetensors_tests)
