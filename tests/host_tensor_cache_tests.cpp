@@ -20,6 +20,8 @@ int main() {
     assert(cache.capacity_bytes() == 8);
     assert(cache.size() == 0);
     assert(cache.resident_bytes() == 0);
+    assert((cache.stats().hits == 0));
+    assert((cache.stats().misses == 0));
 
     assert(cache.put("a", bytes({1, 2, 3, 4})));
     assert(cache.put("b", bytes({5, 6, 7, 8})));
@@ -42,6 +44,10 @@ int main() {
     assert(!cache.get("a"));
     assert(retained->size() == 4);
     assert((*retained)[0] == std::byte{1});
+
+    const auto stats = cache.stats();
+    assert(stats.hits == 4);
+    assert(stats.misses == 2);
 
     assert(!cache.put("too_large", bytes({1, 2, 3, 4, 5, 6, 7, 8, 9})));
     assert(cache.resident_bytes() == 4);
