@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(featherllm_storage
     src/storage/bounded_file.cpp
+    src/storage/host_tensor_cache.cpp
 )
 target_include_directories(featherllm_storage PUBLIC include)
 
@@ -23,6 +24,10 @@ enable_testing()
 add_executable(bounded_file_tests tests/bounded_file_test.cpp)
 target_link_libraries(bounded_file_tests PRIVATE featherllm_storage)
 add_test(NAME bounded_file_tests COMMAND bounded_file_tests)
+
+add_executable(host_tensor_cache_tests tests/host_tensor_cache_tests.cpp)
+target_link_libraries(host_tensor_cache_tests PRIVATE featherllm_storage)
+add_test(NAME host_tensor_cache_tests COMMAND host_tensor_cache_tests)
 
 add_executable(safetensors_tests tests/safetensors_tests.cpp)
 target_link_libraries(safetensors_tests PRIVATE featherllm_safetensors)
