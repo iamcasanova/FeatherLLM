@@ -20,3 +20,20 @@ jobs:
         run: ./build/storage_benchmark
       - name: Host cache benchmark
         run: ./build/host_cache_benchmark
+
+  sanitizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure ASan/UBSan
+        env:
+          CXXFLAGS: -fsanitize=address,undefined -fno-omit-frame-pointer
+          LDFLAGS: -fsanitize=address,undefined
+        run: cmake -S . -B build-sanitized -DCMAKE_BUILD_TYPE=Debug
+      - name: Build ASan/UBSan
+        run: cmake --build build-sanitized --parallel
+      - name: Test ASan/UBSan
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build-sanitized --output-on-failure
