@@ -21,6 +21,41 @@ void skip_ws(const std::string& text, std::size_t& cursor) {
     while (cursor < text.size() && std::isspace(static_cast<unsigned char>(text[cursor]))) ++cursor;
 }
 
+unsigned parse_hex4(const std::string& text, std::size_t& cursor) {
+    if (cursor + 4 > text.size()) throw std::runtime_error("truncated JSON unicode escape");
+    unsigned value = 0;
+    for (int i = 0; i < 4; ++i) {
+        const unsigned char c = static_cast<unsigned char>(text[cursor++]);
+        unsigned digit = 0;
+        if (c >= '0' && c <= '9') digit = c - '0';
+        else if (c >= 'a' && c <= 'f') digit = c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F') digit = c - 'A' + 10;
+        else throw std::runtime_error("invalid JSON unicode escape");
+        value = (value << 4) | digit;
+    }
+    return value;
+}
+
+void append_utf8(std::string& value, unsigned codepoint) {
+    if (codepoint <= 0x7f) {
+        value.push_back(static_cast<char>(codepoint));
+    } else if (codepoint <= 0x7ff) {
+        value.push_back(static_cast<char>(0xc0 | (codepoint >> 6)));
+        value.push_back(static_cast<char>(0x80 | (codepoint & 0x3f)));
+    } else if (codepoint <= 0xffff) {
+        value.push_back(static_cast<char>(0xe0 | (codepoint >> 12)));
+        value.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+        value.push_back(static_cast<char>(0x80 | (codepoint & 0x3f)));
+    } else if (codepoint <= 0x10ffff) {
+        value.push_back(static_cast<char>(0xf0 | (codepoint >> 18)));
+        value.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3f)));
+        value.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3f)));
+        value.push_back(static_cast<char>(0x80 | (codepoint & 0x3f)));
+    } else {
+        throw std::runtime_error("invalid JSON unicode code point");
+    }
+}
+
 std::string parse_quoted(const std::string& text, std::size_t& cursor) {
     skip_ws(text, cursor);
     if (cursor >= text.size() || text[cursor] != '"')
@@ -46,6 +81,23 @@ std::string parse_quoted(const std::string& text, std::size_t& cursor) {
             case 'n': value.push_back('\n'); break;
             case 'r': value.push_back('\r'); break;
             case 't': value.push_back('\t'); break;
+            case 'u': {
+                const unsigned first = parse_hex4(text, cursor);
+                unsigned codepoint = first;
+                if (first >= 0xd800 && first <= 0xdbff) {
+                    if (cursor + 6 > text.size() || text[cursor] != '\\' || text[cursor + 1] != 'u')
+                        throw std::runtime_error("high surrogate without low surrogate");
+                    cursor += 2;
+                    const unsigned second = parse_hex4(text, cursor);
+                    if (second < 0xdc00 || second > 0xdfff)
+                        throw std::runtime_error("invalid low surrogate in JSON unicode escape");
+                    codepoint = 0x10000 + ((first - 0xd800) << 10) + (second - 0xdc00);
+                } else if (first >= 0xdc00 && first <= 0xdfff) {
+                    throw std::runtime_error("unexpected low surrogate in JSON unicode escape");
+                }
+                append_utf8(value, codepoint);
+                break;
+            }
             default: throw std::runtime_error("unsupported JSON escape in weight_map");
         }
     }
