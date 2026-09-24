@@ -1,5 +1,6 @@
 #include "featherllm/safetensors/tensor_reader.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
