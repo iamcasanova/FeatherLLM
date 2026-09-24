@@ -10,6 +10,7 @@ public final class MainActivity extends Activity {
     }
 
     private static native String nativeRuntimeVersion();
+    private static native String nativeLoadCheckpointIndex(String indexPath);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
