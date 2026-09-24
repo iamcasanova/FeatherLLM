@@ -63,6 +63,13 @@ int main() {
     assert(manifest.tensors.at("b").data_offset == data_offset + 3);
     assert(manifest.tensors.at("b").data_length == 4);
 
+    {
+        std::ofstream out(index);
+        out << R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors","b":"manifest_test-00001-of-00001.safetensors"}})";
+    }
+    const auto escaped_manifest = featherllm::storage::load_safetensors_index(index);
+    assert(escaped_manifest.tensors.size() == 2);
+
     expect_rejected(index,
         R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors","a":"manifest_test-00001-of-00001.safetensors"}})");
     expect_rejected(index,
@@ -70,7 +77,9 @@ int main() {
     expect_rejected(index,
         R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors" "b":"manifest_test-00001-of-00001.safetensors"}})");
     expect_rejected(index,
-        R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors\u0020"}})");
+        R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors\u0001"}})");
+    expect_rejected(index,
+        R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors\uD800"}})");
     expect_rejected(index,
         R"({"weight_map":{"a":"../manifest_test-00001-of-00001.safetensors"}})");
     expect_rejected(index,
