@@ -87,6 +87,19 @@ int main() {
     expect_rejected(index,
         R"({"weight_map":{"a":"/tmp/manifest_test-00001-of-00001.safetensors"}})");
 
+    const outside = dir / "manifest_test-outside.safetensors";
+    const symlink = dir / "manifest_test-link.safetensors";
+    write_shard(outside);
+    std::error_code symlink_error;
+    std::filesystem::remove(symlink, symlink_error);
+    std::filesystem::create_symlink(outside.filename(), symlink, symlink_error);
+    if (!symlink_error) {
+        expect_rejected(index,
+            R"({"weight_map":{"a":"manifest_test-link.safetensors"}})");
+        std::filesystem::remove(symlink, symlink_error);
+    }
+    std::filesystem::remove(outside);
+
     std::filesystem::remove(index);
     std::filesystem::remove(shard);
 }

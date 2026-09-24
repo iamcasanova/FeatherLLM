@@ -8,6 +8,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <unordered_map>
 
 namespace featherllm::storage {
@@ -143,13 +144,24 @@ std::unordered_map<std::string, std::string> parse_weight_map(const std::string&
     return result;
 }
 
-void validate_shard_path(const std::filesystem::path& shard) {
+void validate_shard_path(const std::filesystem::path& base,
+                          const std::filesystem::path& shard) {
     if (shard.empty() || shard.is_absolute())
         throw std::runtime_error("checkpoint shard path must be relative");
     for (const auto& component : shard) {
         if (component == "..")
             throw std::runtime_error("checkpoint shard path escapes the index directory");
     }
+
+    std::error_code ec;
+    const auto canonical_base = std::filesystem::weakly_canonical(base, ec);
+    if (ec) throw std::runtime_error("cannot canonicalize checkpoint directory");
+    const auto canonical_shard = std::filesystem::weakly_canonical(base / shard, ec);
+    if (ec) throw std::runtime_error("cannot canonicalize checkpoint shard");
+
+    const auto relative = std::filesystem::relative(canonical_shard, canonical_base, ec);
+    if (ec || relative.empty() || relative == ".." || relative.begin()->string() == "..")
+        throw std::runtime_error("checkpoint shard path escapes the index directory");
 }
 
 } // namespace
@@ -162,7 +174,7 @@ CheckpointManifest load_safetensors_index(const std::filesystem::path& index_pat
     CheckpointManifest manifest;
     for (const auto& [tensor, shard] : weight_map) {
         const std::filesystem::path shard_path(shard);
-        validate_shard_path(shard_path);
+        validate_shard_path(base, shard_path);
         auto it = readers.find(shard);
         if (it == readers.end()) {
             safetensors::Reader reader(base / shard_path);
