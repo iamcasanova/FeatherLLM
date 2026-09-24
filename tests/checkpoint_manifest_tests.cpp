@@ -64,6 +64,34 @@ int main() {
     assert(manifest.tensors.at("b").data_length == 4);
 
     {
+        const auto full = featherllm::storage::read_tensor_bytes(index, "a");
+        assert(full.size() == 3);
+        assert(std::to_integer<unsigned char>(full[0]) == 1);
+        assert(std::to_integer<unsigned char>(full[1]) == 2);
+        assert(std::to_integer<unsigned char>(full[2]) == 3);
+
+        const auto bounded = featherllm::storage::read_tensor_bytes(index, "a", 1, 1);
+        assert(bounded.size() == 1);
+        assert(std::to_integer<unsigned char>(bounded[0]) == 2);
+
+        const auto clamped = featherllm::storage::read_tensor_bytes(index, "b", 2, 99);
+        assert(clamped.size() == 2);
+        assert(std::to_integer<unsigned char>(clamped[0]) == 6);
+        assert(std::to_integer<unsigned char>(clamped[1]) == 7);
+
+        const auto empty = featherllm::storage::read_tensor_bytes(index, "a", 3, 99);
+        assert(empty.empty());
+
+        bool rejected = false;
+        try {
+            (void)featherllm::storage::read_tensor_bytes(index, "a", 4, 1);
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        assert(rejected);
+    }
+
+    {
         std::ofstream out(index);
         out << R"({"weight_map":{"\u0061":"manifest_test-00001-of-00001.safetensors","\u0062":"manifest_test-00001-of-00001.safetensors"}})";
     }
