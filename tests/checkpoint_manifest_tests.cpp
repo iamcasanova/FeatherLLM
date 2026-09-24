@@ -65,10 +65,12 @@ int main() {
 
     {
         std::ofstream out(index);
-        out << R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors","b":"manifest_test-00001-of-00001.safetensors"}})";
+        out << R"({"weight_map":{"\u0061":"manifest_test-00001-of-00001.safetensors","\u0062":"manifest_test-00001-of-00001.safetensors"}})";
     }
     const auto escaped_manifest = featherllm::storage::load_safetensors_index(index);
     assert(escaped_manifest.tensors.size() == 2);
+    assert(escaped_manifest.tensors.at("a").data_length == 3);
+    assert(escaped_manifest.tensors.at("b").data_length == 4);
 
     expect_rejected(index,
         R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors","a":"manifest_test-00001-of-00001.safetensors"}})");
