@@ -9,7 +9,7 @@ HostTensorCache::HostTensorCache(const std::size_t capacity_bytes)
 
 std::shared_ptr<const HostTensorCache::Bytes> HostTensorCache::get(const std::string_view key) {
     std::lock_guard lock(mutex_);
-    const auto it = entries_.find(key);
+    const auto it = entries_.find(std::string(key));
     if (it == entries_.end()) return {};
     touch_locked(it);
     return it->second.data;
@@ -39,7 +39,7 @@ bool HostTensorCache::put(std::string key, Bytes data) {
 
 void HostTensorCache::erase(const std::string_view key) {
     std::lock_guard lock(mutex_);
-    const auto it = entries_.find(key);
+    const auto it = entries_.find(std::string(key));
     if (it != entries_.end()) erase_locked(it);
 }
 

@@ -2,7 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
-#include <memory>
+#include <initializer_list>
 
 namespace {
 
