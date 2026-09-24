@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -14,6 +15,11 @@ namespace featherllm::storage {
 class HostTensorCache {
 public:
     using Bytes = std::vector<std::byte>;
+
+    struct Stats {
+        std::uint64_t hits{0};
+        std::uint64_t misses{0};
+    };
 
     explicit HostTensorCache(std::size_t capacity_bytes);
 
@@ -34,6 +40,7 @@ public:
     std::size_t capacity_bytes() const noexcept;
     std::size_t resident_bytes() const noexcept;
     std::size_t size() const noexcept;
+    Stats stats() const noexcept;
 
 private:
     struct Entry {
@@ -49,6 +56,8 @@ private:
 
     const std::size_t capacity_bytes_;
     std::size_t resident_bytes_{0};
+    std::uint64_t hits_{0};
+    std::uint64_t misses_{0};
     std::list<std::string> lru_;
     Entries entries_;
     mutable std::mutex mutex_;
