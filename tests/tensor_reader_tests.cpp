@@ -32,13 +32,20 @@ int main() {
         out << R"({"weight_map":{"a":"tensor_reader_test.safetensors","b":"tensor_reader_test.safetensors"}})";
     }
 
-    featherllm::safetensors::ShardedTensorReader reader(index, 4);
+    featherllm::safetensors::ShardedTensorReader reader(index, 4, 7);
     const auto a = reader.read_tensor("a");
     const auto b = reader.read_tensor("b");
     const std::vector<std::byte> expected_a{std::byte{1}, std::byte{2}, std::byte{3}};
     const std::vector<std::byte> expected_b{std::byte{4}, std::byte{5}, std::byte{6}, std::byte{7}};
     assert(a == expected_a);
     assert(b == expected_b);
+
+    const auto cached_a = reader.cached_tensor("a");
+    assert(cached_a);
+    assert(*cached_a == expected_a);
+    const auto cached_b = reader.cached_tensor("b");
+    assert(cached_b);
+    assert(*cached_b == expected_b);
 
     bool rejected = false;
     try {
