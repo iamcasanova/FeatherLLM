@@ -11,6 +11,7 @@ public final class MainActivity extends Activity {
 
     private static native String nativeRuntimeVersion();
     private static native String nativeLoadCheckpointIndex(String indexPath);
+    private static native String nativeReadTensorPrefix(String indexPath, String tensorName, int maxBytes);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
