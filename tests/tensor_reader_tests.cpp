@@ -32,7 +32,7 @@ int main() {
         out << R"({"weight_map":{"a":"tensor_reader_test.safetensors","b":"tensor_reader_test.safetensors"}})";
     }
 
-    featherllm::safetensors::ShardedTensorReader reader(index, 4, 7);
+    featherllm::safetensors::ShardedTensorReader reader(index, 4, 8);
     const auto a = reader.read_tensor("a");
     const auto b = reader.read_tensor("b");
     const std::vector<std::byte> expected_a{std::byte{1}, std::byte{2}, std::byte{3}};
