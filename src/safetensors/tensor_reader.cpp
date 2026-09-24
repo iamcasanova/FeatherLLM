@@ -6,14 +6,24 @@
 namespace featherllm::safetensors {
 
 ShardedTensorReader::ShardedTensorReader(std::filesystem::path index_path,
-                                         std::size_t window_bytes)
+                                         std::size_t window_bytes,
+                                         std::size_t host_cache_capacity_bytes)
     : index_path_(index_path),
       window_bytes_(window_bytes),
+      cache_(host_cache_capacity_bytes),
       manifest_(storage::load_safetensors_index(index_path_)) {
     if (window_bytes_ == 0) throw std::invalid_argument("window size must be non-zero");
 }
 
+std::shared_ptr<const storage::HostTensorCache::Bytes>
+ShardedTensorReader::cached_tensor(const std::string& name) {
+    return cache_.get(name);
+}
+
 std::vector<std::byte> ShardedTensorReader::read_tensor(const std::string& name) {
+    const auto cached = cache_.get(name);
+    if (cached) return *cached;
+
     const auto it = manifest_.tensors.find(name);
     if (it == manifest_.tensors.end()) throw std::out_of_range("tensor not found: " + name);
 
@@ -31,6 +41,7 @@ std::vector<std::byte> ShardedTensorReader::read_tensor(const std::string& name)
 
     std::vector<std::byte> data(static_cast<std::size_t>(location.data_length));
     reader_it->second.read(location.data_offset, data);
+    if (cache_.capacity_bytes() != 0) cache_.put(name, data);
     return data;
 }
 
