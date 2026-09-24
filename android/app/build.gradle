@@ -5,6 +5,7 @@ plugins {
 android {
     namespace 'org.featherllm.android'
     compileSdk 36
+    ndkVersion '30.0.16248370'
 
     defaultConfig {
         applicationId 'org.featherllm.android'
@@ -12,8 +13,6 @@ android {
         targetSdk 36
         versionCode 1
         versionName '0.1.0'
-
-        ndkVersion '30.0.16248370'
 
         externalNativeBuild {
             cmake {
