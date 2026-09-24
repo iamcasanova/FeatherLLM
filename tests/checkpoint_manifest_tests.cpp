@@ -71,6 +71,10 @@ int main() {
         R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors" "b":"manifest_test-00001-of-00001.safetensors"}})");
     expect_rejected(index,
         R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors\u0020"}})");
+    expect_rejected(index,
+        R"({"weight_map":{"a":"../manifest_test-00001-of-00001.safetensors"}})");
+    expect_rejected(index,
+        R"({"weight_map":{"a":"/tmp/manifest_test-00001-of-00001.safetensors"}})");
 
     std::filesystem::remove(index);
     std::filesystem::remove(shard);
