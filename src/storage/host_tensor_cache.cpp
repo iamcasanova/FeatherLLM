@@ -71,7 +71,8 @@ void HostTensorCache::erase_locked(const Entries::iterator it) {
 }
 
 void HostTensorCache::evict_until_fit_locked(const std::size_t incoming_bytes) {
-    while (resident_bytes_ + incoming_bytes > capacity_bytes_ && !lru_.empty()) {
+    // Avoid unsigned wraparound in resident_bytes_ + incoming_bytes.
+    while (resident_bytes_ > capacity_bytes_ - incoming_bytes && !lru_.empty()) {
         const auto key = lru_.back();
         const auto it = entries_.find(key);
         if (it != entries_.end()) erase_locked(it);
