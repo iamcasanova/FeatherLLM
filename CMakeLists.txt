@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(FEATHERLLM_BUILD_TESTS "Build FeatherLLM native tests and benchmarks" ON)
+option(FEATHERLLM_ENABLE_WARNINGS "Enable strict compiler warnings" ON)
 
 add_library(featherllm_storage
     src/storage/bounded_file.cpp
@@ -20,6 +21,16 @@ add_library(featherllm_safetensors
 )
 target_include_directories(featherllm_safetensors PUBLIC include)
 target_link_libraries(featherllm_safetensors PUBLIC featherllm_storage)
+
+if(FEATHERLLM_ENABLE_WARNINGS)
+  if(MSVC)
+    target_compile_options(featherllm_storage PRIVATE /W4 /permissive-)
+    target_compile_options(featherllm_safetensors PRIVATE /W4 /permissive-)
+  else()
+    target_compile_options(featherllm_storage PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(featherllm_safetensors PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
+endif()
 
 if(FEATHERLLM_BUILD_TESTS)
   enable_testing()
