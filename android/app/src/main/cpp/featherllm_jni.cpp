@@ -6,6 +6,7 @@
 #include <exception>
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace {
 constexpr const char* kRuntimeVersion = "FeatherLLM Android native runtime 0.1.0";
