@@ -35,8 +35,10 @@ int main() {
     featherllm::safetensors::ShardedTensorReader reader(index, 4);
     const auto a = reader.read_tensor("a");
     const auto b = reader.read_tensor("b");
-    assert(a == std::vector<std::byte>{std::byte{1}, std::byte{2}, std::byte{3}});
-    assert(b == std::vector<std::byte>{std::byte{4}, std::byte{5}, std::byte{6}, std::byte{7}});
+    const std::vector<std::byte> expected_a{std::byte{1}, std::byte{2}, std::byte{3}};
+    const std::vector<std::byte> expected_b{std::byte{4}, std::byte{5}, std::byte{6}, std::byte{7}};
+    assert(a == expected_a);
+    assert(b == expected_b);
 
     bool rejected = false;
     try {
