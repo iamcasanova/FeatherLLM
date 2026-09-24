@@ -1,9 +1,11 @@
 #include "featherllm/storage/checkpoint_manifest.hpp"
 
 #include "featherllm/safetensors.hpp"
+#include "featherllm/storage/bounded_file.hpp"
 
 #include <cctype>
 #include <fstream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -176,6 +178,31 @@ CheckpointManifest load_safetensors_index(const std::filesystem::path& index_pat
             shard, it->second.data_offset() + info.data_begin, info.data_end - info.data_begin});
     }
     return manifest;
+}
+
+std::vector<std::byte> read_tensor_bytes(const std::filesystem::path& index_path,
+                                         const std::string& tensor_name,
+                                         std::uint64_t relative_offset,
+                                         std::size_t max_bytes) {
+    const auto manifest = load_safetensors_index(index_path);
+    const auto it = manifest.tensors.find(tensor_name);
+    if (it == manifest.tensors.end())
+        throw std::runtime_error("tensor not found in checkpoint index: " + tensor_name);
+
+    const auto& location = it->second;
+    if (relative_offset > location.data_length)
+        throw std::runtime_error("tensor read offset exceeds tensor range: " + tensor_name);
+    const auto remaining = location.data_length - relative_offset;
+    const auto requested = std::min<std::uint64_t>(remaining, max_bytes);
+    if (requested > std::numeric_limits<std::size_t>::max())
+        throw std::runtime_error("tensor read exceeds host size_t capacity");
+
+    BoundedFileReader reader(index_path.parent_path() / location.shard);
+    std::vector<std::byte> bytes(static_cast<std::size_t>(requested));
+    if (!bytes.empty()) {
+        reader.read(location.data_offset + relative_offset, bytes);
+    }
+    return bytes;
 }
 
 } // namespace featherllm::storage
