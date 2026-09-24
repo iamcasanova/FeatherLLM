@@ -2,6 +2,7 @@
 
 #include "featherllm/safetensors.hpp"
 
+#include <cctype>
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -16,26 +17,36 @@ std::string read_text(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
 }
 
+void skip_ws(const std::string& text, std::size_t& cursor) {
+    while (cursor < text.size() && std::isspace(static_cast<unsigned char>(text[cursor]))) ++cursor;
+}
+
 std::string parse_quoted(const std::string& text, std::size_t& cursor) {
-    while (cursor < text.size() && (text[cursor] == ' ' || text[cursor] == '\n' ||
-                                    text[cursor] == '\r' || text[cursor] == '\t' ||
-                                    text[cursor] == ',')) ++cursor;
+    skip_ws(text, cursor);
     if (cursor >= text.size() || text[cursor] != '"')
         throw std::runtime_error("expected JSON string in weight_map");
     ++cursor;
     std::string value;
-    bool escaped = false;
     while (cursor < text.size()) {
         const char c = text[cursor++];
-        if (escaped) {
+        if (c == '"') return value;
+        if (static_cast<unsigned char>(c) < 0x20)
+            throw std::runtime_error("unescaped control character in JSON string");
+        if (c != '\\') {
             value.push_back(c);
-            escaped = false;
-        } else if (c == '\\') {
-            escaped = true;
-        } else if (c == '"') {
-            return value;
-        } else {
-            value.push_back(c);
+            continue;
+        }
+        if (cursor >= text.size()) throw std::runtime_error("unterminated JSON escape");
+        switch (text[cursor++]) {
+            case '"': value.push_back('"'); break;
+            case '\\': value.push_back('\\'); break;
+            case '/': value.push_back('/'); break;
+            case 'b': value.push_back('\b'); break;
+            case 'f': value.push_back('\f'); break;
+            case 'n': value.push_back('\n'); break;
+            case 'r': value.push_back('\r'); break;
+            case 't': value.push_back('\t'); break;
+            default: throw std::runtime_error("unsupported JSON escape in weight_map");
         }
     }
     throw std::runtime_error("unterminated JSON string in weight_map");
@@ -45,24 +56,35 @@ std::unordered_map<std::string, std::string> parse_weight_map(const std::string&
     const std::string key = "\"weight_map\"";
     const auto key_pos = json.find(key);
     if (key_pos == std::string::npos) throw std::runtime_error("checkpoint index has no weight_map");
-    const auto object_begin = json.find('{', key_pos + key.size());
-    if (object_begin == std::string::npos) throw std::runtime_error("weight_map is not an object");
+
+    std::size_t cursor = key_pos + key.size();
+    skip_ws(json, cursor);
+    if (cursor >= json.size() || json[cursor++] != ':')
+        throw std::runtime_error("weight_map is missing its colon");
+    skip_ws(json, cursor);
+    if (cursor >= json.size() || json[cursor++] != '{')
+        throw std::runtime_error("weight_map is not an object");
 
     std::unordered_map<std::string, std::string> result;
-    std::size_t cursor = object_begin + 1;
+    skip_ws(json, cursor);
+    if (cursor < json.size() && json[cursor] == '}') return result;
+
     while (true) {
-        while (cursor < json.size() && (json[cursor] == ' ' || json[cursor] == '\n' ||
-                                        json[cursor] == '\r' || json[cursor] == '\t' ||
-                                        json[cursor] == ',')) ++cursor;
+        const auto tensor = parse_quoted(json, cursor);
+        skip_ws(json, cursor);
+        if (cursor >= json.size() || json[cursor++] != ':')
+            throw std::runtime_error("malformed weight_map entry");
+        const auto shard = parse_quoted(json, cursor);
+        if (!result.emplace(tensor, shard).second)
+            throw std::runtime_error("duplicate tensor in weight_map: " + tensor);
+
+        skip_ws(json, cursor);
         if (cursor >= json.size()) throw std::runtime_error("unterminated weight_map");
         if (json[cursor] == '}') break;
-        const auto tensor = parse_quoted(json, cursor);
-        while (cursor < json.size() && (json[cursor] == ' ' || json[cursor] == '\n' ||
-                                        json[cursor] == '\r' || json[cursor] == '\t')) ++cursor;
-        if (cursor >= json.size() || json[cursor] != ':') throw std::runtime_error("malformed weight_map entry");
-        ++cursor;
-        const auto shard = parse_quoted(json, cursor);
-        result.emplace(tensor, shard);
+        if (json[cursor++] != ',') throw std::runtime_error("malformed weight_map separator");
+        skip_ws(json, cursor);
+        if (cursor < json.size() && json[cursor] == '}')
+            throw std::runtime_error("trailing comma in weight_map");
     }
     return result;
 }
