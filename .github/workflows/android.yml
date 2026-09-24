@@ -25,7 +25,7 @@ jobs:
       - name: Install pinned Android toolchain
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "cmake;3.10.2" "ndk;30.0.16248370"
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "cmake;3.22.1" "ndk;30.0.16248370"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
