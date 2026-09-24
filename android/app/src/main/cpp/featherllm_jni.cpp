@@ -3,6 +3,7 @@
 #include "featherllm/storage/checkpoint_manifest.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <exception>
 #include <filesystem>
 #include <string>
@@ -90,6 +91,49 @@ Java_org_featherllm_android_MainActivity_nativeReadTensorPrefix(
             path, tensor, 0, static_cast<std::size_t>(max_bytes));
         return make_string(env, "read " + std::to_string(bytes.size()) +
             " bytes; prefix_hex=" + bytes_to_hex(bytes, 64));
+    } catch (const std::exception& error) {
+        return make_string(env, std::string("error: ") + error.what());
+    }
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_org_featherllm_android_MainActivity_nativeBenchmarkTensorRead(
+    JNIEnv* env, jclass, jstring index_path, jstring tensor_name, jint max_bytes) {
+    if (index_path == nullptr || tensor_name == nullptr) {
+        return make_string(env, "error: index path and tensor name are required");
+    }
+    if (max_bytes <= 0) {
+        return make_string(env, "error: max_bytes must be positive");
+    }
+
+    const char* path_chars = env->GetStringUTFChars(index_path, nullptr);
+    const char* tensor_chars = env->GetStringUTFChars(tensor_name, nullptr);
+    if (path_chars == nullptr || tensor_chars == nullptr) {
+        if (path_chars != nullptr) env->ReleaseStringUTFChars(index_path, path_chars);
+        if (tensor_chars != nullptr) env->ReleaseStringUTFChars(tensor_name, tensor_chars);
+        return make_string(env, "error: unable to read JNI strings");
+    }
+
+    const std::filesystem::path path(path_chars);
+    const std::string tensor(tensor_chars);
+    env->ReleaseStringUTFChars(index_path, path_chars);
+    env->ReleaseStringUTFChars(tensor_name, tensor_chars);
+
+    try {
+        const auto start = std::chrono::steady_clock::now();
+        const auto bytes = featherllm::storage::read_tensor_bytes(
+            path, tensor, 0, static_cast<std::size_t>(max_bytes));
+        const auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now() - start).count();
+        const double mib_per_second = elapsed_us > 0
+            ? (static_cast<double>(bytes.size()) * 1000000.0) /
+              (static_cast<double>(elapsed_us) * 1024.0 * 1024.0)
+            : 0.0;
+
+        return make_string(env,
+            "bytes=" + std::to_string(bytes.size()) +
+            ";elapsed_us=" + std::to_string(elapsed_us) +
+            ";mib_per_s=" + std::to_string(mib_per_second));
     } catch (const std::exception& error) {
         return make_string(env, std::string("error: ") + error.what());
     }
