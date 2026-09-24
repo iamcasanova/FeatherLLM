@@ -24,12 +24,15 @@ int main() {
     }
     const auto end = std::chrono::steady_clock::now();
 
+    const auto stats = cache.stats();
     const double seconds = std::chrono::duration<double>(end - begin).count();
     const double mib = static_cast<double>(iterations * tensor_bytes) / (1024.0 * 1024.0);
     std::cout << "cache_bytes_served=" << (iterations * tensor_bytes)
               << " iterations=" << iterations
               << " seconds=" << seconds
               << " logical_MiB_per_second=" << (mib / seconds)
+              << " hits=" << stats.hits
+              << " misses=" << stats.misses
               << " resident_bytes=" << cache.resident_bytes()
               << " entries=" << cache.size()
               << " checksum=" << checksum << '\n';
