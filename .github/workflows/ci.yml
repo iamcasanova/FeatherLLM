@@ -18,3 +18,5 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: Storage benchmark
         run: ./build/storage_benchmark
+      - name: Host cache benchmark
+        run: ./build/host_cache_benchmark
