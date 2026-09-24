@@ -14,7 +14,7 @@ add_library(featherllm_android SHARED
 )
 
 target_include_directories(featherllm_android PRIVATE
-    ${CMAKE_CURRENT_LIST_DIR}/../../../../../../include
+    ${CMAKE_CURRENT_LIST_DIR}/../../../../../include
 )
 
 target_link_libraries(featherllm_android
