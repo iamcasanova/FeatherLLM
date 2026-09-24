@@ -89,6 +89,15 @@ std::unordered_map<std::string, std::string> parse_weight_map(const std::string&
     return result;
 }
 
+void validate_shard_path(const std::filesystem::path& shard) {
+    if (shard.empty() || shard.is_absolute())
+        throw std::runtime_error("checkpoint shard path must be relative");
+    for (const auto& component : shard) {
+        if (component == "..")
+            throw std::runtime_error("checkpoint shard path escapes the index directory");
+    }
+}
+
 } // namespace
 
 CheckpointManifest load_safetensors_index(const std::filesystem::path& index_path) {
@@ -98,9 +107,11 @@ CheckpointManifest load_safetensors_index(const std::filesystem::path& index_pat
     std::unordered_map<std::string, safetensors::Reader> readers;
     CheckpointManifest manifest;
     for (const auto& [tensor, shard] : weight_map) {
+        const std::filesystem::path shard_path(shard);
+        validate_shard_path(shard_path);
         auto it = readers.find(shard);
         if (it == readers.end()) {
-            safetensors::Reader reader(base / shard);
+            safetensors::Reader reader(base / shard_path);
             reader.open();
             it = readers.emplace(shard, std::move(reader)).first;
         }
