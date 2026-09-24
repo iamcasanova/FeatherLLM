@@ -10,7 +10,11 @@ HostTensorCache::HostTensorCache(const std::size_t capacity_bytes)
 std::shared_ptr<const HostTensorCache::Bytes> HostTensorCache::get(const std::string_view key) {
     std::lock_guard lock(mutex_);
     const auto it = entries_.find(std::string(key));
-    if (it == entries_.end()) return {};
+    if (it == entries_.end()) {
+        ++misses_;
+        return {};
+    }
+    ++hits_;
     touch_locked(it);
     return it->second.data;
 }
@@ -62,6 +66,11 @@ std::size_t HostTensorCache::resident_bytes() const noexcept {
 std::size_t HostTensorCache::size() const noexcept {
     std::lock_guard lock(mutex_);
     return entries_.size();
+}
+
+HostTensorCache::Stats HostTensorCache::stats() const noexcept {
+    std::lock_guard lock(mutex_);
+    return Stats{hits_, misses_};
 }
 
 void HostTensorCache::erase_locked(const Entries::iterator it) {
