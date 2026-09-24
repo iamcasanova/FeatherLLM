@@ -2,6 +2,7 @@
 
 #include "featherllm/storage/checkpoint_manifest.hpp"
 
+#include <exception>
 #include <filesystem>
 #include <string>
 
@@ -14,13 +15,13 @@ jstring make_string(JNIEnv* env, const std::string& value) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_org_featherllm_android_MainActivity_nativeRuntimeVersion(JNIEnv* env, jobject) {
+Java_org_featherllm_android_MainActivity_nativeRuntimeVersion(JNIEnv* env, jclass) {
     return make_string(env, kRuntimeVersion);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_org_featherllm_android_MainActivity_nativeLoadCheckpointIndex(
-    JNIEnv* env, jobject, jstring index_path) {
+    JNIEnv* env, jclass, jstring index_path) {
     if (index_path == nullptr) {
         return make_string(env, "error: checkpoint index path is null");
     }
