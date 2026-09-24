@@ -27,6 +27,20 @@ void write_shard(const std::filesystem::path& path) {
     out.write(reinterpret_cast<const char*>(bytes), sizeof(bytes));
 }
 
+void expect_rejected(const std::filesystem::path& index, const std::string& json) {
+    {
+        std::ofstream out(index);
+        out << json;
+    }
+    bool rejected = false;
+    try {
+        (void)featherllm::storage::load_safetensors_index(index);
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    assert(rejected);
+}
+
 } // namespace
 
 int main() {
@@ -48,6 +62,15 @@ int main() {
     assert(manifest.tensors.at("a").data_length == 3);
     assert(manifest.tensors.at("b").data_offset == data_offset + 3);
     assert(manifest.tensors.at("b").data_length == 4);
+
+    expect_rejected(index,
+        R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors","a":"manifest_test-00001-of-00001.safetensors"}})");
+    expect_rejected(index,
+        R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors",}})");
+    expect_rejected(index,
+        R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors" "b":"manifest_test-00001-of-00001.safetensors"}})");
+    expect_rejected(index,
+        R"({"weight_map":{"a":"manifest_test-00001-of-00001.safetensors\u0020"}})");
 
     std::filesystem::remove(index);
     std::filesystem::remove(shard);
