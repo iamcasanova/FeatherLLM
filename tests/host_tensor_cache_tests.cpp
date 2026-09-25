@@ -52,6 +52,20 @@ int main() {
     assert(!cache.put("too_large", bytes({1, 2, 3, 4, 5, 6, 7, 8, 9})));
     assert(cache.resident_bytes() == 4);
 
+    // A rejected replacement must not evict an existing resident tensor.
+    assert(cache.put("keep", bytes({1, 2, 3, 4})));
+    assert(!cache.put("keep", bytes({1, 2, 3, 4, 5})));
+    const auto kept = cache.get("keep");
+    assert(kept);
+    assert(kept->size() == 4);
+    assert((*kept)[0] == std::byte{1});
+
+    // Zero-capacity caches are disabled and cannot retain even empty tensors.
+    featherllm::storage::HostTensorCache disabled(0);
+    assert(!disabled.put("empty", {}));
+    assert(disabled.size() == 0);
+    assert(disabled.resident_bytes() == 0);
+
     cache.clear();
     assert(cache.size() == 0);
     assert(cache.resident_bytes() == 0);

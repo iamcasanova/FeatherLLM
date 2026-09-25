@@ -21,22 +21,30 @@ std::shared_ptr<const HostTensorCache::Bytes> HostTensorCache::get(const std::st
 
 bool HostTensorCache::put(std::string key, Bytes data) {
     const std::size_t incoming_bytes = data.size();
-    std::lock_guard lock(mutex_);
-
-    if (incoming_bytes > capacity_bytes_) {
-        const auto existing = entries_.find(key);
-        if (existing != entries_.end()) erase_locked(existing);
+    if (incoming_bytes > capacity_bytes_ || capacity_bytes_ == 0) {
         return false;
     }
 
+    // Complete potentially throwing allocations before mutating cache state.
+    auto data_ptr = std::make_shared<const Bytes>(std::move(data));
+
+    std::lock_guard lock(mutex_);
     const auto existing = entries_.find(key);
     if (existing != entries_.end()) erase_locked(existing);
 
     evict_until_fit_locked(incoming_bytes);
     lru_.push_front(key);
     const auto lru_position = lru_.begin();
-    auto data_ptr = std::make_shared<const Bytes>(std::move(data));
-    entries_.emplace(*lru_position, Entry{std::move(data_ptr), lru_position});
+
+    try {
+        entries_.emplace(*lru_position, Entry{std::move(data_ptr), lru_position});
+    } catch (...) {
+        // unordered_map::emplace provides the strong guarantee, so only the
+        // list node created above needs to be rolled back.
+        lru_.pop_front();
+        throw;
+    }
+
     resident_bytes_ += incoming_bytes;
     return true;
 }
