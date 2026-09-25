@@ -68,15 +68,34 @@ int main() {
         }
         const auto end = std::chrono::steady_clock::now();
 
+        featherllm::safetensors::ShardedTensorReader reader(index, 4 * 1024 * 1024);
+        const auto reusable_begin = std::chrono::steady_clock::now();
+        std::uint64_t reusable_checksum = 0;
+        for (std::size_t i = 0; i < iterations; ++i) {
+            const auto bytes = reader.read_tensor_range(
+                "weights", (i * read_bytes) % (tensor_bytes - read_bytes), read_bytes);
+            for (const auto byte : bytes)
+                reusable_checksum += std::to_integer<unsigned int>(byte);
+        }
+        const auto reusable_end = std::chrono::steady_clock::now();
+
         const double seconds = std::chrono::duration<double>(end - begin).count();
+        const double reusable_seconds =
+            std::chrono::duration<double>(reusable_end - reusable_begin).count();
         const double mib = static_cast<double>(iterations * read_bytes) / (1024.0 * 1024.0);
+
+        if (reusable_checksum != checksum)
+            throw std::runtime_error("reusable reader checksum mismatch");
 
         std::cout << "checkpoint_tensor_bytes=" << tensor_bytes
                   << " bytes_read=" << (iterations * read_bytes)
                   << " iterations=" << iterations
                   << " seconds=" << seconds
                   << " MiB_per_second=" << (mib / seconds)
-                  << " checksum=" << checksum << '\n';
+                  << " reusable_reader_seconds=" << reusable_seconds
+                  << " reusable_reader_MiB_per_second=" << (mib / reusable_seconds)
+                  << " checksum=" << checksum
+                  << " reusable_checksum=" << reusable_checksum << '\n';
 
         std::filesystem::remove(index);
         std::filesystem::remove(shard);
