@@ -4,7 +4,18 @@ Research-grade constrained-memory LLM inference engine.
 
 ## Current implementation
 
-The repository currently contains the first storage/checkpoint-engine milestone: a C++20 Safetensors reader with header/index parsing, tensor metadata validation, bounded tensor reads, and a minimal executable test.
+The canonical repository currently contains the storage/checkpoint foundation:
+
+- C++20/CMake core
+- Safetensors header/index parsing with tensor metadata and byte-range validation
+- sharded checkpoint manifests with confined shard paths
+- bounded tensor reads
+- bounded host-tensor residency with LRU eviction and hit/miss telemetry
+- reusable sharded tensor reader
+- native tests and storage/checkpoint/residency benchmarks
+- Android Gradle/NDK/CMake/JNI build scaffold under `android/`
+
+The transformer/inference runtime is not yet complete. The Android path currently exercises the native storage/checkpoint layer rather than full token generation.
 
 ## Build
 
@@ -13,8 +24,6 @@ cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
-
-The runtime remains model-agnostic and is intended to expose a C++ core with a Python interface as subsequent milestones are implemented.
 
 ## Engineering direction
 
@@ -27,5 +36,6 @@ The runtime remains model-agnostic and is intended to expose a C++ core with a P
 7. Compute/memory reduction
 8. FeatherCodec context compression
 9. Energy telemetry and optimization
+10. Android local inference integration
 
 Claims about builds, tests, benchmarks, or energy measurements are only made after they are actually executed and verified.
