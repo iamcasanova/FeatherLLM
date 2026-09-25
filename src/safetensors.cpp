@@ -54,7 +54,7 @@ std::size_t find_matching_object(const std::string& text, std::size_t begin) {
 }
 
 std::string parse_json_string_field(const std::string& body, const char* field) {
-    const std::string needle = std::string(""") + field + """;
+    const std::string needle = std::string("\"") + field + "\"";
     const auto field_pos = find_required(body, needle, 0, "missing tensor string field");
     std::size_t cursor = field_pos + needle.size();
     while (cursor < body.size() &&
@@ -98,7 +98,7 @@ std::string parse_json_string_field(const std::string& body, const char* field) 
 }
 
 std::pair<std::uint64_t, std::uint64_t> parse_offsets(const std::string& body) {
-    const std::string needle = ""data_offsets"";
+    const std::string needle = "\"data_offsets\"";
     const auto field_pos = find_required(body, needle, 0, "missing data_offsets");
     std::size_t cursor = field_pos + needle.size();
     while (cursor < body.size() &&
@@ -152,7 +152,7 @@ std::pair<std::uint64_t, std::uint64_t> parse_offsets(const std::string& body) {
 }
 
 std::vector<std::uint64_t> parse_shape(const std::string& body) {
-    const std::string needle = ""shape"";
+    const std::string needle = "\"shape\"";
     const auto field_pos = find_required(body, needle, 0, "missing shape");
     std::size_t cursor = field_pos + needle.size();
     while (cursor < body.size() &&
@@ -220,7 +220,7 @@ void validate_data_coverage(const std::unordered_map<std::string, TensorInfo>& t
     std::sort(ranges.begin(), ranges.end());
 
     std::uint64_t cursor = 0;
-    for (const auto [begin, end] : ranges) {
+    for (const auto& [begin, end] : ranges) {
         if (begin != cursor)
             throw std::runtime_error("tensor ranges do not completely cover the data buffer");
         cursor = end;
