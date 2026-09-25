@@ -1,3 +1,4 @@
+#include "featherllm/safetensors/tensor_reader.hpp"
 #include "featherllm/storage/checkpoint_manifest.hpp"
 
 #include <algorithm>
