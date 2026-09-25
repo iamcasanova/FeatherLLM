@@ -1,5 +1,6 @@
 #include "featherllm/safetensors/tensor_reader.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <stdexcept>
 
@@ -42,6 +43,34 @@ std::vector<std::byte> ShardedTensorReader::read_tensor(const std::string& name)
     std::vector<std::byte> data(static_cast<std::size_t>(location.data_length));
     reader_it->second.read(location.data_offset, data);
     if (cache_.capacity_bytes() != 0) cache_.put(name, data);
+    return data;
+}
+
+std::vector<std::byte> ShardedTensorReader::read_tensor_range(
+    const std::string& name,
+    std::uint64_t relative_offset,
+    std::size_t max_bytes) {
+    const auto it = manifest_.tensors.find(name);
+    if (it == manifest_.tensors.end()) throw std::out_of_range("tensor not found: " + name);
+
+    const auto& location = it->second;
+    if (relative_offset > location.data_length)
+        throw std::out_of_range("tensor read offset exceeds tensor range: " + name);
+
+    const auto remaining = location.data_length - relative_offset;
+    const auto requested = std::min<std::uint64_t>(
+        remaining, static_cast<std::uint64_t>(max_bytes));
+
+    auto reader_it = readers_.find(location.shard);
+    if (reader_it == readers_.end()) {
+        const auto path = index_path_.parent_path() / location.shard;
+        auto [inserted, ok] = readers_.try_emplace(location.shard, path, window_bytes_);
+        (void)ok;
+        reader_it = inserted;
+    }
+
+    std::vector<std::byte> data(static_cast<std::size_t>(requested));
+    if (!data.empty()) reader_it->second.read(location.data_offset + relative_offset, data);
     return data;
 }
 
