@@ -5,6 +5,7 @@
 #include "featherllm/storage/host_tensor_cache.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -21,6 +22,10 @@ public:
 
     [[nodiscard]] const storage::CheckpointManifest& manifest() const noexcept { return manifest_; }
     [[nodiscard]] std::vector<std::byte> read_tensor(const std::string& name);
+    [[nodiscard]] std::vector<std::byte> read_tensor_range(
+        const std::string& name,
+        std::uint64_t relative_offset,
+        std::size_t max_bytes);
     [[nodiscard]] std::shared_ptr<const storage::HostTensorCache::Bytes>
     cached_tensor(const std::string& name);
 
