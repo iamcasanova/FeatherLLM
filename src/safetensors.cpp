@@ -1,9 +1,12 @@
 #include "featherllm/safetensors.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <limits>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 namespace featherllm::safetensors {
 namespace {
@@ -51,49 +54,193 @@ std::size_t find_matching_object(const std::string& text, std::size_t begin) {
 }
 
 std::string parse_json_string_field(const std::string& body, const char* field) {
-    const std::string needle = std::string("\"") + field + "\":\"";
-    const auto begin = find_required(body, needle, 0, "missing tensor string field") + needle.size();
-    const auto end = body.find('"', begin);
-    if (end == std::string::npos) throw std::runtime_error("unterminated tensor string field");
-    return body.substr(begin, end - begin);
+    const std::string needle = std::string(""") + field + """;
+    const auto field_pos = find_required(body, needle, 0, "missing tensor string field");
+    std::size_t cursor = field_pos + needle.size();
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != ':')
+        throw std::runtime_error("malformed tensor string field");
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != '"')
+        throw std::runtime_error("tensor string field is not a JSON string");
+
+    std::string value;
+    bool escaped = false;
+    while (cursor < body.size()) {
+        const char c = body[cursor++];
+        if (escaped) {
+            // dtype strings are identifiers; accepting only the JSON escapes
+            // needed for a string while preserving the value avoids silently
+            // interpreting malformed escape sequences as dtype names.
+            if (c == '"' || c == '\\' || c == '/')
+                value.push_back(c);
+            else
+                throw std::runtime_error("unsupported escape in tensor string field");
+            escaped = false;
+            continue;
+        }
+        if (c == '\\') {
+            escaped = true;
+            continue;
+        }
+        if (c == '"') return value;
+        if (static_cast<unsigned char>(c) < 0x20)
+            throw std::runtime_error("unescaped control character in tensor string field");
+        value.push_back(c);
+    }
+    throw std::runtime_error("unterminated tensor string field");
 }
 
 std::pair<std::uint64_t, std::uint64_t> parse_offsets(const std::string& body) {
-    const std::string needle = "\"data_offsets\":[";
-    const auto begin = find_required(body, needle, 0, "missing data_offsets") + needle.size();
-    const auto comma = body.find(',', begin);
-    const auto end = body.find(']', comma == std::string::npos ? begin : comma + 1);
-    if (comma == std::string::npos || end == std::string::npos) throw std::runtime_error("malformed data_offsets");
-    return {std::stoull(body.substr(begin, comma - begin)),
-            std::stoull(body.substr(comma + 1, end - comma - 1))};
+    const std::string needle = ""data_offsets"";
+    const auto field_pos = find_required(body, needle, 0, "missing data_offsets");
+    std::size_t cursor = field_pos + needle.size();
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != ':')
+        throw std::runtime_error("malformed data_offsets");
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != '[')
+        throw std::runtime_error("data_offsets is not an array");
+
+    auto parse_number = [&](std::uint64_t& value) {
+        while (cursor < body.size() &&
+               std::isspace(static_cast<unsigned char>(body[cursor]))) {
+            ++cursor;
+        }
+        const auto begin = cursor;
+        while (cursor < body.size() &&
+               std::isdigit(static_cast<unsigned char>(body[cursor]))) {
+            ++cursor;
+        }
+        if (begin == cursor) throw std::runtime_error("malformed data_offsets number");
+        try {
+            value = std::stoull(body.substr(begin, cursor - begin));
+        } catch (const std::exception&) {
+            throw std::runtime_error("data_offsets number overflows uint64");
+        }
+    };
+
+    std::uint64_t begin = 0;
+    std::uint64_t end = 0;
+    parse_number(begin);
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != ',')
+        throw std::runtime_error("data_offsets must contain two values");
+    parse_number(end);
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != ']')
+        throw std::runtime_error("malformed data_offsets");
+    return {begin, end};
 }
 
 std::vector<std::uint64_t> parse_shape(const std::string& body) {
-    const std::string needle = "\"shape\":[";
-    const auto begin = find_required(body, needle, 0, "missing shape") + needle.size();
-    const auto end = body.find(']', begin);
-    if (end == std::string::npos) throw std::runtime_error("malformed shape");
+    const std::string needle = ""shape"";
+    const auto field_pos = find_required(body, needle, 0, "missing shape");
+    std::size_t cursor = field_pos + needle.size();
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != ':')
+        throw std::runtime_error("malformed shape");
+    while (cursor < body.size() &&
+           std::isspace(static_cast<unsigned char>(body[cursor]))) {
+        ++cursor;
+    }
+    if (cursor >= body.size() || body[cursor++] != '[')
+        throw std::runtime_error("shape is not an array");
 
     std::vector<std::uint64_t> shape;
-    std::size_t cursor = begin;
-    while (cursor < end) {
-        while (cursor < end && (body[cursor] == ' ' || body[cursor] == ',')) ++cursor;
-        if (cursor >= end) break;
-        const auto comma = body.find(',', cursor);
-        const auto stop = comma == std::string::npos || comma > end ? end : comma;
-        shape.push_back(std::stoull(body.substr(cursor, stop - cursor)));
-        cursor = stop + 1;
+    while (true) {
+        while (cursor < body.size() &&
+               std::isspace(static_cast<unsigned char>(body[cursor]))) {
+            ++cursor;
+        }
+        if (cursor >= body.size()) throw std::runtime_error("unterminated shape");
+        if (body[cursor] == ']') {
+            ++cursor;
+            return shape;
+        }
+
+        const auto begin = cursor;
+        while (cursor < body.size() &&
+               std::isdigit(static_cast<unsigned char>(body[cursor]))) {
+            ++cursor;
+        }
+        if (begin == cursor) throw std::runtime_error("malformed shape dimension");
+        try {
+            shape.push_back(std::stoull(body.substr(begin, cursor - begin)));
+        } catch (const std::exception&) {
+            throw std::runtime_error("shape dimension overflows uint64");
+        }
+
+        while (cursor < body.size() &&
+               std::isspace(static_cast<unsigned char>(body[cursor]))) {
+            ++cursor;
+        }
+        if (cursor >= body.size()) throw std::runtime_error("unterminated shape");
+        if (body[cursor] == ',') {
+            ++cursor;
+            continue;
+        }
+        if (body[cursor] == ']') {
+            ++cursor;
+            return shape;
+        }
+        throw std::runtime_error("malformed shape separator");
     }
-    return shape;
+}
+
+void validate_data_coverage(const std::unordered_map<std::string, TensorInfo>& tensors,
+                            std::uint64_t data_bytes) {
+    std::vector<std::pair<std::uint64_t, std::uint64_t>> ranges;
+    ranges.reserve(tensors.size());
+    for (const auto& [name, info] : tensors) {
+        (void)name;
+        ranges.emplace_back(info.data_begin, info.data_end);
+    }
+    std::sort(ranges.begin(), ranges.end());
+
+    std::uint64_t cursor = 0;
+    for (const auto [begin, end] : ranges) {
+        if (begin != cursor)
+            throw std::runtime_error("tensor ranges do not completely cover the data buffer");
+        cursor = end;
+    }
+    if (cursor != data_bytes)
+        throw std::runtime_error("tensor ranges do not completely cover the data buffer");
 }
 
 } // namespace
 
 std::size_t dtype_size(const std::string& dtype) {
-    if (dtype == "BOOL" || dtype == "U8" || dtype == "I8") return 1;
+    if (dtype == "BOOL" || dtype == "U8" || dtype == "I8" ||
+        dtype == "F8_E4M3" || dtype == "F8_E4M3FNUZ" ||
+        dtype == "F8_E5M2" || dtype == "F8_E5M2FNUZ" ||
+        dtype == "F8_E8M0") return 1;
     if (dtype == "F16" || dtype == "BF16" || dtype == "I16" || dtype == "U16") return 2;
     if (dtype == "F32" || dtype == "I32" || dtype == "U32") return 4;
     if (dtype == "F64" || dtype == "I64" || dtype == "U64") return 8;
+    if (dtype == "F4_E2M1_X2") return 1;
+    if (dtype == "C64") return 8;
     throw std::runtime_error("unsupported dtype: " + dtype);
 }
 
@@ -122,18 +269,40 @@ void Reader::open() {
 
 void Reader::parse_header(const std::string& header) {
     tensors_.clear();
-    std::size_t pos = 0;
-    while (true) {
+
+    std::size_t first = 0;
+    while (first < header.size() &&
+           std::isspace(static_cast<unsigned char>(header[first]))) {
+        ++first;
+    }
+    if (first >= header.size() || header[first] != '{')
+        throw std::runtime_error("safetensors header must be a JSON object");
+
+    std::size_t last = header.size();
+    while (last > first &&
+           std::isspace(static_cast<unsigned char>(header[last - 1]))) {
+        --last;
+    }
+    if (last <= first || header[last - 1] != '}')
+        throw std::runtime_error("safetensors header must end with a JSON object");
+
+    std::size_t pos = first + 1;
+    while (pos < last - 1) {
         pos = header.find('"', pos);
-        if (pos == std::string::npos) break;
+        if (pos == std::string::npos || pos >= last - 1) break;
         const auto key_end = header.find('"', pos + 1);
-        if (key_end == std::string::npos) throw std::runtime_error("malformed JSON key");
+        if (key_end == std::string::npos || key_end >= last)
+            throw std::runtime_error("malformed JSON key");
         const std::string name = header.substr(pos + 1, key_end - pos - 1);
         const auto colon = header.find(':', key_end + 1);
-        if (colon == std::string::npos) throw std::runtime_error("malformed JSON object member");
+        if (colon == std::string::npos || colon >= last)
+            throw std::runtime_error("malformed JSON object member");
         const auto object_begin = header.find('{', colon + 1);
-        if (object_begin == std::string::npos) throw std::runtime_error("malformed tensor object");
+        if (object_begin == std::string::npos || object_begin >= last)
+            throw std::runtime_error("malformed tensor object");
         const auto object_end = find_matching_object(header, object_begin);
+        if (object_end >= last)
+            throw std::runtime_error("malformed tensor object");
 
         if (name == "__metadata__") {
             pos = object_end + 1;
@@ -157,9 +326,12 @@ void Reader::parse_header(const std::string& header) {
         if (elements * element_size != info.data_end - info.data_begin)
             throw std::runtime_error("tensor byte range does not match dtype and shape");
 
-        tensors_.emplace(name, std::move(info));
+        if (!tensors_.emplace(name, std::move(info)).second)
+            throw std::runtime_error("duplicate tensor name in safetensors header: " + name);
         pos = object_end + 1;
     }
+
+    validate_data_coverage(tensors_, file_size_ - data_offset_);
 }
 
 std::vector<std::byte> Reader::read_tensor(const std::string& name) const {
