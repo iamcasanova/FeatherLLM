@@ -143,7 +143,8 @@ std::shared_ptr<const MappedFileRegion> MappedFileReader::map(
         throw std::out_of_range("mapped file range outside file");
     }
     if (length == 0) {
-        return std::make_shared<const MappedFileRegion>(nullptr, 0, nullptr, 0);
+        return std::shared_ptr<const MappedFileRegion>(
+            new MappedFileRegion(nullptr, 0, nullptr, 0));
     }
 
 #ifdef _WIN32
