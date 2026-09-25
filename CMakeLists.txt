@@ -11,6 +11,7 @@ option(FEATHERLLM_ENABLE_WARNINGS "Enable strict compiler warnings" ON)
 add_library(featherllm_storage
     src/storage/bounded_file.cpp
     src/storage/host_tensor_cache.cpp
+    src/storage/mapped_file.cpp
 )
 target_include_directories(featherllm_storage PUBLIC include)
 
@@ -42,6 +43,10 @@ if(FEATHERLLM_BUILD_TESTS)
   add_executable(host_tensor_cache_tests tests/host_tensor_cache_tests.cpp)
   target_link_libraries(host_tensor_cache_tests PRIVATE featherllm_storage)
   add_test(NAME host_tensor_cache_tests COMMAND host_tensor_cache_tests)
+
+  add_executable(mapped_file_tests tests/mapped_file_tests.cpp)
+  target_link_libraries(mapped_file_tests PRIVATE featherllm_storage)
+  add_test(NAME mapped_file_tests COMMAND mapped_file_tests)
 
   add_executable(safetensors_tests tests/safetensors_tests.cpp)
   target_link_libraries(safetensors_tests PRIVATE featherllm_safetensors)
