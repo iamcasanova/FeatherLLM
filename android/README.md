@@ -9,7 +9,7 @@ This directory is the first-class Android build path for the canonical FeatherLL
 - JDK: 17
 - Android API: compile/target 36
 - Android NDK LTS: r30 (`30.0.16248370`)
-- Android CMake: 3.10.2 (SDK-managed)
+- Android CMake: 3.22.1 (SDK-managed)
 - ABI: `arm64-v8a`
 
 The NDK and CMake binaries are host/CI prerequisites and are intentionally not committed to this repository.
@@ -20,7 +20,7 @@ Install Android SDK command-line tools, then accept licenses and install the pin
 
 ```powershell
 sdkmanager --licenses
-sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "cmake;3.10.2" "ndk;30.0.16248370"
+sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "cmake;3.22.1" "ndk;30.0.16248370"
 ```
 
 Ensure JDK 17 is active. From the repository root:
