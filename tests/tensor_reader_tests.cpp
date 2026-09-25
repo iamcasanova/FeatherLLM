@@ -40,6 +40,25 @@ int main() {
     assert(a == expected_a);
     assert(b == expected_b);
 
+    const auto range = reader.read_tensor_range("b", 1, 99);
+    const std::vector<std::byte> expected_range{std::byte{5}, std::byte{6}, std::byte{7}};
+    assert(range == expected_range);
+
+    const auto clamped = reader.read_tensor_range("b", 2, 99);
+    const std::vector<std::byte> expected_clamped{std::byte{6}, std::byte{7}};
+    assert(clamped == expected_clamped);
+
+    const auto empty = reader.read_tensor_range("b", 4, 99);
+    assert(empty.empty());
+
+    bool rejected_range = false;
+    try {
+        (void)reader.read_tensor_range("b", 5, 1);
+    } catch (const std::out_of_range&) {
+        rejected_range = true;
+    }
+    assert(rejected_range);
+
     const auto cached_a = reader.cached_tensor("a");
     assert(cached_a);
     assert(*cached_a == expected_a);
