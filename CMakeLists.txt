@@ -60,4 +60,7 @@ if(FEATHERLLM_BUILD_TESTS)
 
   add_executable(host_cache_benchmark benchmarks/host_cache_benchmark.cpp)
   target_link_libraries(host_cache_benchmark PRIVATE featherllm_safetensors)
+
+  add_executable(checkpoint_benchmark benchmarks/checkpoint_benchmark.cpp)
+  target_link_libraries(checkpoint_benchmark PRIVATE featherllm_safetensors)
 endif()
