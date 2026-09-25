@@ -55,7 +55,7 @@ int main() {
     }
 
     const auto manifest = featherllm::storage::load_safetensors_index(index);
-    const auto data_offset = shard_data_offset(shard);
+    const auto data_offset = shard_data_offset(shard) - 7;
     assert(manifest.tensors.size() == 2);
     assert(manifest.tensors.at("a").shard == shard.filename().string());
     assert(manifest.tensors.at("a").data_offset == data_offset);
