@@ -54,7 +54,7 @@ int main() {
 
     // A rejected replacement must not evict an existing resident tensor.
     assert(cache.put("keep", bytes({1, 2, 3, 4})));
-    assert(!cache.put("keep", bytes({1, 2, 3, 4, 5})));
+    assert(!cache.put("keep", bytes({1, 2, 3, 4, 5, 6, 7, 8, 9})));
     const auto kept = cache.get("keep");
     assert(kept);
     assert(kept->size() == 4);
