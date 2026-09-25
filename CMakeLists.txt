@@ -60,6 +60,10 @@ if(FEATHERLLM_BUILD_TESTS)
   target_link_libraries(tensor_reader_tests PRIVATE featherllm_safetensors)
   add_test(NAME tensor_reader_tests COMMAND tensor_reader_tests)
 
+  add_executable(lazy_tensor_view_tests tests/lazy_tensor_view_tests.cpp)
+  target_link_libraries(lazy_tensor_view_tests PRIVATE featherllm_safetensors)
+  add_test(NAME lazy_tensor_view_tests COMMAND lazy_tensor_view_tests)
+
   add_executable(storage_benchmark benchmarks/storage_benchmark.cpp)
   target_link_libraries(storage_benchmark PRIVATE featherllm_storage)
 
