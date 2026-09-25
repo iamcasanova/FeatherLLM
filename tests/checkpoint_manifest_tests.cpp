@@ -115,8 +115,8 @@ int main() {
     expect_rejected(index,
         R"({"weight_map":{"a":"/tmp/manifest_test-00001-of-00001.safetensors"}})");
 
-    const outside = dir.parent_path() / "manifest_test-outside.safetensors";
-    const symlink = dir / "manifest_test-link.safetensors";
+    const std::filesystem::path outside = dir.parent_path() / "manifest_test-outside.safetensors";
+    const std::filesystem::path symlink = dir / "manifest_test-link.safetensors";
     write_shard(outside);
     std::error_code symlink_error;
     std::filesystem::remove(symlink, symlink_error);
