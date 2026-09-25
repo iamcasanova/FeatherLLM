@@ -37,9 +37,7 @@ void expect_rejected(const char* path, const std::string& header,
 int main() {
     const char* path = "featherllm_test.safetensors";
     const std::string header =
-        "{"__metadata__":{"format":"pt","note":"test"},"
-        ""x":{"dtype":"F32","shape":[2],"data_offsets":[0,8]},"
-        ""y":{"dtype":"U8","shape":[3],"data_offsets":[8,11]}}";
+        R"({"__metadata__":{"format":"pt","note":"test"},"x":{"dtype":"F32","shape":[2],"data_offsets":[0,8]},"y":{"dtype":"U8","shape":[3],"data_offsets":[8,11]}})";
     const unsigned char payload[11] = {
         0, 0, 128, 63, 0, 0, 0, 64, 7, 8, 9};
 
@@ -70,26 +68,22 @@ int main() {
     assert(rejected);
 
     const std::string whitespace_header =
-        "{ "x" : { "dtype" : "U8", "shape" : [ 3 ], "
-        ""data_offsets" : [ 0, 3 ] } }   ";
+        R"( { "x" : { "dtype" : "U8", "shape" : [ 3 ], "data_offsets" : [ 0, 3 ] } }   )";
     write_file(path, whitespace_header, payload, 3);
     featherllm::safetensors::Reader whitespace_reader(path);
     whitespace_reader.open();
     assert(whitespace_reader.tensors().at("x").data_end == 3);
 
     expect_rejected(path,
-        "{"x":{"dtype":"U8","shape":[3],"data_offsets":[0,2]}}",
+        R"({"x":{"dtype":"U8","shape":[3],"data_offsets":[0,2]}})",
         payload, 3);
     expect_rejected(path,
-        "{"x":{"dtype":"U8","shape":[3],"data_offsets":[1,3]}}",
+        R"({"x":{"dtype":"U8","shape":[3],"data_offsets":[1,3]}})",
         payload, 3);
     expect_rejected(path,
-        "{"x":{"dtype":"U8","shape":[3],"data_offsets":[0,3]},"
-        ""y":{"dtype":"U8","shape":[0],"data_offsets":[3,3]},"
-        ""x":{"dtype":"U8","shape":[0],"data_offsets":[3,3]}}",
+        R"({"x":{"dtype":"U8","shape":[3],"data_offsets":[0,3]},"y":{"dtype":"U8","shape":[0],"data_offsets":[3,3]},"x":{"dtype":"U8","shape":[0],"data_offsets":[3,3]}})",
         payload, 3);
 
     std::remove(path);
-    std::cout << "safetensors tests passed
-";
+    std::cout << "safetensors tests passed\n";
 }
