@@ -239,7 +239,6 @@ std::size_t dtype_size(const std::string& dtype) {
     if (dtype == "F16" || dtype == "BF16" || dtype == "I16" || dtype == "U16") return 2;
     if (dtype == "F32" || dtype == "I32" || dtype == "U32") return 4;
     if (dtype == "F64" || dtype == "I64" || dtype == "U64") return 8;
-    if (dtype == "F4_E2M1_X2") return 1;
     if (dtype == "C64") return 8;
     throw std::runtime_error("unsupported dtype: " + dtype);
 }
