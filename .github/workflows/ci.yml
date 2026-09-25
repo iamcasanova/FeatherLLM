@@ -20,6 +20,8 @@ jobs:
         run: ./build/storage_benchmark
       - name: Host cache benchmark
         run: ./build/host_cache_benchmark
+      - name: Checkpoint benchmark
+        run: ./build/checkpoint_benchmark
 
   sanitizer:
     runs-on: ubuntu-latest
@@ -47,3 +49,8 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ./build-sanitized/host_cache_benchmark
+      - name: Checkpoint benchmark under sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ./build-sanitized/checkpoint_benchmark
