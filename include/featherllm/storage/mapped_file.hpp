@@ -20,6 +20,13 @@ public:
     [[nodiscard]] std::size_t size() const noexcept { return size_; }
     [[nodiscard]] bool empty() const noexcept { return size_ == 0; }
 
+public:
+    // Constructs an unmapped region. Only used for zero-length views.
+    MappedFileRegion(const std::byte* data,
+                     std::size_t size,
+                     void* mapping_handle,
+                     std::size_t mapped_size) noexcept;
+
 private:
     friend class MappedFileReader;
 
