@@ -32,18 +32,18 @@ int main() {
     require(cache.resident_bytes() == 8);
 
     const auto a = cache.get("a");
-    require(a);
+    require(static_cast<bool>(a));
     require(a->size() == 4);
     require((*a)[0] == std::byte{1});
 
     require(cache.put("c", bytes({9, 10, 11, 12})));
     require(!cache.get("b"));
-    require(cache.get("a"));
-    require(cache.get("c"));
+    require(static_cast<bool>(cache.get("a")));
+    require(static_cast<bool>(cache.get("c")));
     require(cache.resident_bytes() == 8);
 
     const auto retained = cache.get("a");
-    require(retained);
+    require(static_cast<bool>(retained));
     cache.erase("a");
     require(!cache.get("a"));
     require(retained->size() == 4);
@@ -59,7 +59,7 @@ int main() {
     require(cache.put("keep", bytes({1, 2, 3, 4})));
     require(!cache.put("keep", bytes({1, 2, 3, 4, 5, 6, 7, 8, 9})));
     const auto kept = cache.get("keep");
-    require(kept);
+    require(static_cast<bool>(kept));
     require(kept->size() == 4);
     require((*kept)[0] == std::byte{1});
 
