@@ -1,12 +1,16 @@
 #include "featherllm/safetensors/tensor_reader.hpp"
 
-#include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <vector>
 
 namespace {
+
+void require(bool condition) {
+    if (!condition) std::abort();
+}
 
 void write_shard(const std::filesystem::path& path) {
     const std::string header =
@@ -37,19 +41,19 @@ int main() {
     const auto b = reader.read_tensor("b");
     const std::vector<std::byte> expected_a{std::byte{1}, std::byte{2}, std::byte{3}};
     const std::vector<std::byte> expected_b{std::byte{4}, std::byte{5}, std::byte{6}, std::byte{7}};
-    assert(a == expected_a);
-    assert(b == expected_b);
+    require(a == expected_a);
+    require(b == expected_b);
 
     const auto range = reader.read_tensor_range("b", 1, 99);
     const std::vector<std::byte> expected_range{std::byte{5}, std::byte{6}, std::byte{7}};
-    assert(range == expected_range);
+    require(range == expected_range);
 
     const auto clamped = reader.read_tensor_range("b", 2, 99);
     const std::vector<std::byte> expected_clamped{std::byte{6}, std::byte{7}};
-    assert(clamped == expected_clamped);
+    require(clamped == expected_clamped);
 
     const auto empty = reader.read_tensor_range("b", 4, 99);
-    assert(empty.empty());
+    require(empty.empty());
 
     bool rejected_range = false;
     try {
@@ -57,14 +61,14 @@ int main() {
     } catch (const std::out_of_range&) {
         rejected_range = true;
     }
-    assert(rejected_range);
+    require(rejected_range);
 
     const auto cached_a = reader.cached_tensor("a");
-    assert(cached_a);
-    assert(*cached_a == expected_a);
+    require(cached_a);
+    require(*cached_a == expected_a);
     const auto cached_b = reader.cached_tensor("b");
-    assert(cached_b);
-    assert(*cached_b == expected_b);
+    require(cached_b);
+    require(*cached_b == expected_b);
 
     bool rejected = false;
     try {
@@ -72,7 +76,7 @@ int main() {
     } catch (const std::out_of_range&) {
         rejected = true;
     }
-    assert(rejected);
+    require(rejected);
 
     std::filesystem::remove(index);
     std::filesystem::remove(shard);
