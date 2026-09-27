@@ -1,11 +1,15 @@
 #include "featherllm/safetensors/tensor_reader.hpp"
 
-#include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 
 namespace {
+
+void require(bool condition) {
+    if (!condition) std::abort();
+}
 
 void write_shard(const std::filesystem::path& path) {
     const std::string header =
@@ -33,10 +37,10 @@ int main() {
 
     featherllm::safetensors::ShardedTensorReader reader(index, 4, 0);
     const auto view = reader.view_tensor("b");
-    assert(view.is_mapped());
-    assert(view.size() == 4);
-    assert(view.data()[0] == std::byte{4});
-    assert(view.data()[3] == std::byte{7});
+    require(view.is_mapped());
+    require(view.size() == 4);
+    require(view.data()[0] == std::byte{4});
+    require(view.data()[3] == std::byte{7});
 
     std::filesystem::remove(index);
     std::filesystem::remove(shard);
