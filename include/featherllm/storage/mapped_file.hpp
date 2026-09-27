@@ -30,11 +30,6 @@ public:
 private:
     friend class MappedFileReader;
 
-    MappedFileRegion(const std::byte* data,
-                     std::size_t size,
-                     void* mapping_handle,
-                     std::size_t mapped_size) noexcept;
-
     const std::byte* data_{nullptr};
     std::size_t size_{0};
     void* mapping_handle_{nullptr};
