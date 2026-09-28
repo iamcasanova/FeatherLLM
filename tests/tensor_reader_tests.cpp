@@ -33,7 +33,7 @@ int main() {
     write_shard(shard);
     {
         std::ofstream out(index);
-        out << R"({"weight_map":{"a":"tensor_reader_test.safetensors","b":"tensor_reader_test.safetensors"}})";
+        out << R"({\"weight_map\":{\"a\":\"tensor_reader_test.safetensors\",\"b\":\"tensor_reader_test.safetensors\"}})";
     }
 
     featherllm::safetensors::ShardedTensorReader reader(index, 4, 8);
@@ -64,10 +64,10 @@ int main() {
     require(rejected_range);
 
     const auto cached_a = reader.cached_tensor("a");
-    require(cached_a);
+    require(static_cast<bool>(cached_a));
     require(*cached_a == expected_a);
     const auto cached_b = reader.cached_tensor("b");
-    require(cached_b);
+    require(static_cast<bool>(cached_b));
     require(*cached_b == expected_b);
 
     bool rejected = false;
